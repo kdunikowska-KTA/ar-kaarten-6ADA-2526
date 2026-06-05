@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AR Cards + Anim</title>
+
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <!-- animation-mixer (voor glTF animaties) -->
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
+
+    <style>
+      body { margin:0; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      #overlay {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: rgb(23, 0, 83); color: #fff; padding: 24px; z-index: 9999;
+      }
+      #panel { max-width: 540px; }
+      #panel h1 { font-size: 20px; margin: 0 0 12px; }
+      #panel p { line-height: 1.4; margin: 0 0 10px; opacity: 0.92; }
+      button {
+        border: 0; padding: 12px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;
+        background: #ffffff; color:#140058;
+      }
+      #tiny { font-size: 12px; opacity: 0.8; margin-top: 10px; }
+      #status { margin-top: 10px; font-size: 13px; opacity: 0.9; }
+    </style>
+  </head>
+
+  <body>
+    <!-- Start/Privacy overlay -->
+    <div id="overlay">
+      <div id="panel">
+        <h1> KTA DIGITAL ARTS</h1>
+        <h2> AR Scan</h2>
+        <p>
+          Deze pagina gebruikt je camera enkel om de kaart te herkennen en het 3D-model te tonen.
+          Er wordt door deze pagina niets opgeslagen of doorgestuurd.
+        </p>
+
+        <button id="startBtn">Start AR (camera)</button>
+        <div id="status"></div>
+
+        <div id="tiny">
+          Klaar? Sluit dit tabblad om de camera te stoppen. Controleer altijd de URL (https + jouw github.io).
+        </div>
+      </div>
+    </div>
+
+    <a-scene
+      id="scene"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      renderer="colorManagement: true, physicallyCorrectLights: true"
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!-- 10 targets met placeholder gltf-models (src wordt pas gezet bij targetFound) -->
+      <a-entity id="t0" mindar-image-target="targetIndex: 0"><a-gltf-model id="m0" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t1" mindar-image-target="targetIndex: 1"><a-gltf-model id="m1" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t2" mindar-image-target="targetIndex: 2"><a-gltf-model id="m2" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t3" mindar-image-target="targetIndex: 3"><a-gltf-model id="m3" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t4" mindar-image-target="targetIndex: 4"><a-gltf-model id="m4" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t5" mindar-image-target="targetIndex: 5"><a-gltf-model id="m5" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t6" mindar-image-target="targetIndex: 6"><a-gltf-model id="m6" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t7" mindar-image-target="targetIndex: 7"><a-gltf-model id="m7" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t8" mindar-image-target="targetIndex: 8"><a-gltf-model id="m8" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+      <a-entity id="t9" mindar-image-target="targetIndex: 9"><a-gltf-model id="m9" visible="false" position="0 0 0.15" scale="0.5 0.5 0.5"></a-gltf-model></a-entity>
+    </a-scene>
+
+    <script>
+      const overlay = document.getElementById("overlay");
+      const startBtn = document.getElementById("startBtn");
+      const sceneEl = document.getElementById("scene");
+
+      // Mapping: targetIndex -> model file
+      const modelFiles = [
+        "./model_00.glb?v=999",
+        "./model_01.glb?v=999",
+        "./model_02.glb?v=999",
+        "./model_03.glb?v=999",
+        "./model_04.glb?v=999",
+        "./model_05.glb?v=999",
+        "./model_06.glb?v=999",
+        "./model_07.glb?v=999",
+        "./model_08.glb?v=999",
+        "./model_09.glb?v=999"
+      ];
+
+      // Welke animatieclip afspelen per kaart:
+      // - Gebruik "*" als je gewoon de (eerste/alle) animatie(s) wil afspelen.
+      // - Of zet bv. "Idle" / "Attack" als je Actions zo heten in Blender.
+      const clips = [
+        "*","*","*","*","*","*","*","*","*","*"
+      ];
+
+      // Onthouden welke modellen al geladen zijn
+      const loaded = new Array(10).fill(false);
+
+      function getArSystem() {
+        return sceneEl.systems["mindar-image-system"];
+      }
+
+      function hideAllModels() {
+        for (let i = 0; i < 10; i++) {
+          const modelEl = document.getElementById("m" + i);
+          if (modelEl) modelEl.setAttribute("visible", "false");
+        }
+      }
+
+      function setMixer(modelEl, clipName, timeScale) {
+        const clipPart = (clipName && clipName !== "") ? `clip: ${clipName};` : "";
+        modelEl.setAttribute("animation-mixer", `${clipPart} loop: repeat; timeScale: ${timeScale}`);
+      }
+
+      function bindTarget(i) {
+  const targetEl = document.getElementById("t" + i);
+  const modelEl  = document.getElementById("m" + i);
+  const statusEl = document.getElementById("status");
+  if (!targetEl || !modelEl) return;
+
+  // Als het model niet kan laden (404 / corrupt), toon dit
+  modelEl.addEventListener("model-error", () => {
+    statusEl.textContent = `Fout: kan ${modelFiles[i]} niet laden. Check bestandsnaam + of het bestand online staat.`;
+  });
+
+  targetEl.addEventListener("targetFound", () => {
+    statusEl.textContent = ""; // clear
+
+    hideAllModels();
+
+    if (!loaded[i]) {
+      loaded[i] = true;
+
+      modelEl.addEventListener("model-loaded", () => {
+        setMixer(modelEl, clips[i], 1);
+      }, { once: true });
+
+      modelEl.setAttribute("src", modelFiles[i]);
+    } else {
+      setMixer(modelEl, clips[i], 1);
+    }
+
+    modelEl.setAttribute("visible", "true");
+  });
+
+  targetEl.addEventListener("targetLost", () => {
+    modelEl.setAttribute("visible", "false");
+    setMixer(modelEl, clips[i], 0);
+  });
+}
+
+      function setupTargets() {
+        for (let i = 0; i < 10; i++) bindTarget(i);
+      }
+
+      startBtn.addEventListener("click", () => {
+        overlay.style.display = "none";
+
+        if (!sceneEl.hasLoaded) {
+          sceneEl.addEventListener("loaded", () => {
+            setupTargets();
+            getArSystem().start();
+          }, { once: true });
+        } else {
+          setupTargets();
+          getArSystem().start();
+        }
+      });
+    </script>
+  </body>
+</html>
